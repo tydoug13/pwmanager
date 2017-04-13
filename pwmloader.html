@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){
+	var user = window.location.pathname.replace('/', '');
+	var sess = getCookie('session');
+ 	var info = ("{\"{0}\": \"{1}\", \"{2}\": \"{3}\"}").format("user", user, "session", sess);
+
+	$.ajax({
+	    url: "http://$INSERT-HOST-NAME$:$INSERT-HOST-PORT$",
+	    type: "POST",
+	    data: {'start': info},
+	    dataType: "text",
+	    success: function (result) {
+	    	if (result != '')
+    	    	document.write(result);
+	    },
+	    error: function (xhr, ajaxOptions, thrownError) {
+	        window.location = '/';
+	    }
+	});
+})
+
+function getCookie(cname) {
+    var name = cname + "=";
+    var ca = document.cookie.split(';');
+    for(var i = 0; i <ca.length; i++) {
+        var c = ca[i];
+        while (c.charAt(0)==' ') {
+            c = c.substring(1);
+        }
+        if (c.indexOf(name) == 0) {
+            return c.substring(name.length,c.length);
+        }
+    }
+    return "";
+}
+
+if (!String.prototype.format) {
+  String.prototype.format = function() {
+    var args = arguments;
+    return this.replace(/{(\d+)}/g, function(match, number) { 
+      return typeof args[number] != 'undefined'
+        ? args[number]
+        : match
+      ;
+    });
+  };
+}
+</script>
+</head>
+</html>

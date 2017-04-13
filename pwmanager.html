@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html style="background-color: #3e94ec;">
+<head>
+<style>
+@import url(http://fonts.googleapis.com/css?family=Roboto:400,500,700,300,100);
+
+html, body {
+  overflow: auto;
+  margin-top: 0px;
+  background-color: #3e94ec;
+  font-family: "Roboto", helvetica, arial, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  text-rendering: optimizeLegibility;
+}
+
+#div-logout {
+  position: fixed;
+  font-size: 14px;
+  right: 0.75%;
+  top: 1.33%;
+}
+
+#div-logout a {
+  text-decoration: none;
+  text-shadow: 1px 1px 4px #000;
+  color: #dadada;
+}
+
+#div-user {
+  width: 100%;
+  min-width: 28cm;
+  min-height: 12mm;
+  margin-top: 2%;
+  margin-bottom: 2%;
+  font-size: 44px;
+  font-weight: 100;
+  color: #ffffff;
+  text-shadow: 2px 2px 8px #000;
+}
+
+table {
+  border-collapse: collapse;
+  box-shadow: rgba(0,0,0,0.8) 0 0 8px;
+  border-radius: 4px;
+  margin-bottom: 4%;
+  min-width: 28cm;
+  width: 90%;
+}
+
+.first-col {
+  width: 6%;
+}
+
+.last-col {
+  width: 6%;
+}
+
+.minus-button, .plus-button {
+  width: 24px;
+  height: 24px;
+  padding: 0px;
+  margin: 0px;
+  background: #efefef;
+  font-size: 16px;
+  border: 1px solid #dfdfdf;
+  box-shadow: 0 0 4px #37454d;
+  border-radius: 2px;
+
+}
+
+.minus-button {
+  color: #cd040b;
+}
+
+.plus-button {
+  color: #000000;
+}
+
+.copy-img {
+  width: 24px;
+  height: 24px;
+}
+
+.copy-img:active{
+  background: #dfdfdf;
+  box-shadow: 0 0 6px #37454d;
+}
+
+input {
+  font-family: "Roboto", helvetica, arial, sans-serif;
+  border: 1px solid #585b58;
+  background-color: #ffffff;
+}
+
+th {
+  border-right: 1px solid #585b58;
+  font-size: 16px;
+  font-weight: 100;
+  padding-top:12px;
+  padding-bottom:12px;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+  vertical-align: middle;
+  color: #0c1011;
+}
+
+#col-names th {
+  height: 100%;
+  font-size: 18.4px;
+  font-weight: 200;
+  font-style: normal;
+  font-family: "Roboto", helvetica, arial, sans-serif;
+  color: #efefef;
+  background: #222b2f;
+  border-bottom: 3px solid #585b58;
+  text-shadow: #000 -0.6px -0.6px 0;
+}
+
+#col-names th:last-child {
+  border-top-right-radius: 4px;
+  border-right: none;
+}
+
+#col-names th:first-child {
+  border-top-left-radius: 4px;
+  border-left: none;
+}
+
+.data-row {
+  border-bottom: 1px solid #585b58;
+}
+
+tr:nth-child(even) {
+  background: #dbdbdb;
+}
+
+tr:nth-child(odd) {
+  background: #efefef;
+}
+
+#row-add th:last-child {
+  border-bottom-right-radius: 4px;
+  border-right: none;
+}
+
+#row-add th:first-child {
+  border-bottom-left-radius: 4px;
+  border-left: none;
+}
+</style>
+
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+<script type="text/javascript">
+var is_logged_out = false;
+var has_left = false;
+var copy_count = 0;
+var motion_count = 0;
+
+var add_passwd_new = '';
+
+$(document).ready(function() {
+  waklert();
+
+  window.addEventListener('blur', function() {
+    has_left = true;
+  });
+
+  window.addEventListener('focus', function() {
+    has_left = false;
+  });
+
+  window.addEventListener('beforeunload', function(e) {
+    var confirmationMessage = 'Be sure to clear you clipboard!';
+   
+    if (!is_logged_out)
+      do_logout(false);
+  
+    (e || window.event).returnValue = confirmationMessage;
+    return confirmationMessage;                          
+  });
+});
+
+function waklert() {
+  motion_count++;
+
+  setTimeout(function() {
+    motion_count--;
+
+    if (motion_count == 0) {
+      do_logout(true); 
+    }
+  }, 180000);
+}
+
+function preview_encrypt() {
+  var key = $("#input_add_key").val();
+
+  if (key != '') {
+    $("#th_add_passwd").html(do_encrypt(add_passwd_new, key));
+  } else {
+    $("#th_add_passwd").html(add_passwd_new);
+  }
+}
+
+function gen_passwd() {
+  var key = $("#input_add_key").val();
+  var passwd = '';
+
+  if ($("#input_add_site").val() != '') {
+    passwd = rand_pass();
+  }
+
+  add_passwd_new = passwd;
+
+  if (key != '') {
+    $("#th_add_passwd").html(do_encrypt(add_passwd_new, key));
+  } 
+  else {
+    $("#th_add_passwd").html(add_passwd_new);
+  }
+}
+
+function add_passwd() {
+  var site = $("#input_add_site").val();
+  while (site.includes('\'') || site.includes('\"') || site.includes(' ')) {
+    site = site.replace('\'', '_APOS_');
+    site = site.replace('\"', '_QUOT_');
+    site = site.replace(' ', '_SPACE_');
+  }
+
+  var user = '$INSERT-USER$';
+  var ciphertext = $("#th_add_passwd").html();
+  var key = $("#input_add_key").val();
+
+  if (site == '' || /^\s+$/.test(site)) {
+    alert('Site must be nonempty!');
+    return;
+  } else if(site.includes('|')) {
+    alert('Site may not contain pipe character!')
+    return;
+  } else if (!isNaN(site.charAt(0))) {
+    alert('Site may not begin with a digit!')
+    return;
+  }
+
+  if (key == '' || /\s/.test(key)) {
+    alert('Key must be nonempty!');
+    return;
+  }
+
+  $.ajax({
+      url: "http://$INSERT-HOST-NAME$:$INSERT-HOST-PORT$",
+      type: "POST",
+      data: {"command":"add", "user": user, "site":site, "passwd":ciphertext},
+      dataType: "text",
+      success: function (result) {
+          if (result != '')
+              $('body').html(result);
+      },
+      error: function (xhr, ajaxOptions, thrownError) {}
+  });
+}
+
+function do_encrypt(val, key) {
+  var key_bytes = new Array(16);
+
+  AES_Init();
+
+    for(var i = 0; i &lt; 16; i++) {
+        key_bytes[i] = 0;
+    }
+
+    for (var i = 0; i &lt; key.length; i++) {
+        key_bytes[i] = key.charCodeAt(i);
+    }
+
+    AES_ExpandKey(key_bytes);
+
+    var val_bytes = new Array(16);
+    var ciphertext = '';
+
+    for (var i = 0; i &lt; val.length / 16; i++) {
+
+        for(var j = 0; j &lt; 16; j++) {
+            val_bytes[j] = 0;
+        }
+
+        for (var j = 0; j &lt; 16; j++) {
+            val_bytes[j] = val.charCodeAt(j + 16 * i);
+        }
+
+        AES_Encrypt(val_bytes, key_bytes);
+        ciphertext += new String(bin2string(val_bytes));
+    }
+
+  return btoa(ciphertext);
+}
+
+function rand_pass() {
+  var rand_pass = '', i, random, bytes = [];
+
+  for (i = 0; i &lt; 32; i++) {
+    random = Math.random() * 16 | 0;
+    rand_pass += (i == 12 ? 4 : (i == 16 ? (random &amp; 3 | 8) : random)).toString(16);
+  }
+
+  for(var i=0; i &lt; rand_pass.length-1; i+=2) {
+    bytes.push(parseInt(rand_pass.substr(i, 2), 16));
+  }
+
+  if (Math.random() > 0.5) {
+    bytes.push(Math.random() * 64 | 0);
+      
+    if (Math.random() > 0.5)
+      bytes.push(Math.random() * 64 | 0);
+  }
+
+  return btoa(String.fromCharCode.apply(String, bytes));
+}
+
+function bin2string(array){
+  var result = '';
+
+  for(var i = 0; i &lt; array.length; i++){
+    result+= (String.fromCharCode(array[i]));
+  }
+
+  return result;
+}
+
+function AES_Init() {
+  AES_Sbox_Inv = new Array(256);
+  for(var i = 0; i &lt; 256; i++)
+    AES_Sbox_Inv[AES_Sbox[i]] = i;
+  
+  AES_ShiftRowTab_Inv = new Array(16);
+  for(var i = 0; i &lt; 16; i++)
+    AES_ShiftRowTab_Inv[AES_ShiftRowTab[i]] = i;
+
+  AES_xtime = new Array(256);
+  for(var i = 0; i &lt; 128; i++) {
+    AES_xtime[i] = i &lt;&lt; 1;
+    AES_xtime[128 + i] = (i &lt;&lt; 1) ^ 0x1b;
+  }
+}
+
+function AES_Done() {
+  delete AES_Sbox_Inv;
+  delete AES_ShiftRowTab_Inv;
+  delete AES_xtime;
+}
+
+function AES_ExpandKey(key) {
+  var kl = key.length, ks, Rcon = 1;
+  switch (kl) {
+    case 16: ks = 16 * (10 + 1); break;
+    case 24: ks = 16 * (12 + 1); break;
+    case 32: ks = 16 * (14 + 1); break;
+    default: 
+      alert("AES_ExpandKey: Only key lengths of 16, 24 or 32 bytes allowed!");
+  }
+  for(var i = kl; i &lt; ks; i += 4) {
+    var temp = key.slice(i - 4, i);
+    if (i % kl == 0) {
+      temp = new Array(AES_Sbox[temp[1]] ^ Rcon, AES_Sbox[temp[2]], 
+  AES_Sbox[temp[3]], AES_Sbox[temp[0]]); 
+      if ((Rcon &lt;&lt;= 1) &gt;= 256)
+  Rcon ^= 0x11b;
+    }
+    else if ((kl &gt; 24) &amp;&amp; (i % kl == 16))
+      temp = new Array(AES_Sbox[temp[0]], AES_Sbox[temp[1]], 
+  AES_Sbox[temp[2]], AES_Sbox[temp[3]]);       
+    for(var j = 0; j &lt; 4; j++)
+      key[i + j] = key[i + j - kl] ^ temp[j];
+  }
+}
+
+function AES_Encrypt(block, key) {
+  var l = key.length;
+  AES_AddRoundKey(block, key.slice(0, 16));
+  for(var i = 16; i &lt; l - 16; i += 16) {
+    AES_SubBytes(block, AES_Sbox);
+    AES_ShiftRows(block, AES_ShiftRowTab);
+    AES_MixColumns(block);
+    AES_AddRoundKey(block, key.slice(i, i + 16));
+  }
+  AES_SubBytes(block, AES_Sbox);
+  AES_ShiftRows(block, AES_ShiftRowTab);
+  AES_AddRoundKey(block, key.slice(i, l));
+}
+
+function AES_Decrypt(block, key) {
+  var l = key.length;
+  AES_AddRoundKey(block, key.slice(l - 16, l));
+  AES_ShiftRows(block, AES_ShiftRowTab_Inv);
+  AES_SubBytes(block, AES_Sbox_Inv);
+  for(var i = l - 32; i &gt;= 16; i -= 16) {
+    AES_AddRoundKey(block, key.slice(i, i + 16));
+    AES_MixColumns_Inv(block);
+    AES_ShiftRows(block, AES_ShiftRowTab_Inv);
+    AES_SubBytes(block, AES_Sbox_Inv);
+  }
+  AES_AddRoundKey(block, key.slice(0, 16));
+}
+
+AES_Sbox = new Array(99,124,119,123,242,107,111,197,48,1,103,43,254,215,171,
+  118,202,130,201,125,250,89,71,240,173,212,162,175,156,164,114,192,183,253,
+  147,38,54,63,247,204,52,165,229,241,113,216,49,21,4,199,35,195,24,150,5,154,
+  7,18,128,226,235,39,178,117,9,131,44,26,27,110,90,160,82,59,214,179,41,227,
+  47,132,83,209,0,237,32,252,177,91,106,203,190,57,74,76,88,207,208,239,170,
+  251,67,77,51,133,69,249,2,127,80,60,159,168,81,163,64,143,146,157,56,245,
+  188,182,218,33,16,255,243,210,205,12,19,236,95,151,68,23,196,167,126,61,
+  100,93,25,115,96,129,79,220,34,42,144,136,70,238,184,20,222,94,11,219,224,
+  50,58,10,73,6,36,92,194,211,172,98,145,149,228,121,231,200,55,109,141,213,
+  78,169,108,86,244,234,101,122,174,8,186,120,37,46,28,166,180,198,232,221,
+  116,31,75,189,139,138,112,62,181,102,72,3,246,14,97,53,87,185,134,193,29,
+  158,225,248,152,17,105,217,142,148,155,30,135,233,206,85,40,223,140,161,
+  137,13,191,230,66,104,65,153,45,15,176,84,187,22);
+
+AES_ShiftRowTab = new Array(0,5,10,15,4,9,14,3,8,13,2,7,12,1,6,11);
+
+function AES_SubBytes(state, sbox) {
+  for(var i = 0; i &lt; 16; i++)
+    state[i] = sbox[state[i]];  
+}
+
+function AES_AddRoundKey(state, rkey) {
+  for(var i = 0; i &lt; 16; i++)
+    state[i] ^= rkey[i];
+}
+
+function AES_ShiftRows(state, shifttab) {
+  var h = new Array().concat(state);
+  for(var i = 0; i &lt; 16; i++)
+    state[i] = h[shifttab[i]];
+}
+
+function AES_MixColumns(state) {
+  for(var i = 0; i &lt; 16; i += 4) {
+    var s0 = state[i + 0], s1 = state[i + 1];
+    var s2 = state[i + 2], s3 = state[i + 3];
+    var h = s0 ^ s1 ^ s2 ^ s3;
+    state[i + 0] ^= h ^ AES_xtime[s0 ^ s1];
+    state[i + 1] ^= h ^ AES_xtime[s1 ^ s2];
+    state[i + 2] ^= h ^ AES_xtime[s2 ^ s3];
+    state[i + 3] ^= h ^ AES_xtime[s3 ^ s0];
+  }
+}
+
+function AES_MixColumns_Inv(state) {
+  for(var i = 0; i &lt; 16; i += 4) {
+    var s0 = state[i + 0], s1 = state[i + 1];
+    var s2 = state[i + 2], s3 = state[i + 3];
+    var h = s0 ^ s1 ^ s2 ^ s3;
+    var xh = AES_xtime[h];
+    var h1 = AES_xtime[AES_xtime[xh ^ s0 ^ s2]] ^ h;
+    var h2 = AES_xtime[AES_xtime[xh ^ s1 ^ s3]] ^ h;
+    state[i + 0] ^= h1 ^ AES_xtime[s0 ^ s1];
+    state[i + 1] ^= h2 ^ AES_xtime[s1 ^ s2];
+    state[i + 2] ^= h1 ^ AES_xtime[s2 ^ s3];
+    state[i + 3] ^= h2 ^ AES_xtime[s3 ^ s0];
+  }
+}
+
+function do_logout(should_redirect) {
+  var user = '$INSERT-USER$';
+  document.body.innerHTML = '';
+
+  $.ajax({
+      url: "http://$INSERT-HOST-NAME$:$INSERT-HOST-PORT$",
+      type: "POST",
+      data: {"logout":user},
+      dataType: "text",
+      success: function (result) {
+        prompt('Clear your clipboard: Ctrl+C, Enter', 'nothing');
+        is_logged_out = true;
+
+        if (should_redirect)
+          window.location = '/';
+      },
+      error: function (xhr, ajaxOptions, thrownError) {
+        alert('Failed to logout!');
+      }
+  });
+}
+</script>
+</head>
+
+<body align="center" onmousemove="waklert()" onkeypress="waklert()">
+<div id="div-logout">
+  <a href="javascript:do_logout(true)">logout</a>
+</div>
+<div align="center" id="div-user">$INSERT-USER$</div>
+
+<table align="center">
+	<tr id="col-names" align="center">
+		<th style="width: 6%">&#177;</th>
+		<th style="width: 20%">Website</th>
+		<th style="width: 20%">Key</th>
+		<th style="width: 42%">Password</th>
+		<th style="width: 6%">Hide</th>
+    <th style="width: 6%">Copy</th>
+	</tr>
+
+  <tr id="row-add">
+		<th style="width: 6%">
+			<button class="plus-button" id="button_add" onclick="add_passwd()">+</button>
+		</th>
+		<th style="width: 20% ">
+			<input id="input_add_site" oninput="gen_passwd()" style="text-align: center; width: 90%;
+				font-weight:normal; font-size:100%;" />
+		</th>
+		<th style="width: 20%">
+			<input id="input_add_key" type="password" oninput="preview_encrypt()" style="text-align: center; width: 90%;
+				font-size:100%;" />
+		</th>
+		<th id="th_add_passwd" style="width: 42%; font-weight:normal" />
+		<th style="width: 6%; font-weight:normal" />
+    <th style="width: 6%; font-weight:normal" />
+	</tr>
+</table>
+</body>
+</html>
